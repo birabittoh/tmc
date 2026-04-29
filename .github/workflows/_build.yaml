@@ -55,12 +55,10 @@ jobs:
         if: matrix.os_name == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y xmake libpng-dev libfmt-dev nlohmann-json3-dev
+          sudo apt-get install -y libpng-dev libfmt-dev nlohmann-json3-dev
 
-      - name: Install Windows dependencies
-        if: matrix.os_name == 'windows'
-        run: |
-          choco install xmake -y
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
 
       - name: Checkout private assets repository
         uses: actions/checkout@v4

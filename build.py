@@ -119,9 +119,7 @@ def pkg_config_ok(name: str) -> bool:
 
 # (label, check_fn, arch_pkg, apt_pkg)
 LINUX_DEPS = [
-    ("xmake",         lambda: bool(shutil.which("xmake")),      "xmake",         "xmake"),
     ("git",           lambda: bool(shutil.which("git")),        "git",           "git"),
-    ("SDL3",          lambda: pkg_config_ok("sdl3"),            "sdl3",          "libsdl3-dev"),
     ("libpng",        lambda: pkg_config_ok("libpng"),          "libpng",        "libpng-dev"),
     ("fmt",           lambda: pkg_config_ok("fmt"),             "fmt",           "libfmt-dev"),
     ("nlohmann-json", lambda: pkg_config_ok("nlohmann_json"),   "nlohmann-json", "nlohmann-json3-dev"),
