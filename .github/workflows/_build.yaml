@@ -88,8 +88,8 @@ jobs:
       - name: Prepare artifact payload
         shell: bash
         run: |
-          REGION_UPPER=$(echo "${{ matrix.region }}" | tr '[:lower:]' '[:upper:]')
-          BIN_PATH="dist/${REGION_UPPER}/${{ matrix.exe_name }}"
+          DIST_REGION=$([ "${{ matrix.region }}" = "eur" ] && echo "EU" || echo "USA")
+          BIN_PATH="dist/${DIST_REGION}/${{ matrix.exe_name }}"
           EXTRACTOR_PATH="build/pc/${{ matrix.extractor_name }}"
           test -f "$BIN_PATH"
           test -f "$EXTRACTOR_PATH"
