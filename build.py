@@ -299,10 +299,15 @@ def build_version(version: str, env: dict) -> Optional[Path]:
     dist_dir.mkdir(parents=True, exist_ok=True)
 
     # The codebase uses GCC-specific flags; force MinGW so xmake doesn't
-    # pick up MSVC on Windows runners.
+    # pick up MSVC on Windows runners.  If XMAKE_MINGW_SDK is set (CI),
+    # point xmake at that specific SDK (MSYS2) so it passes validation and
+    # uses the matching pkg-config to find system packages like libpng.
     config_cmd = ["xmake", "f", "-y", f"--game_version={version}"]
     if PLATFORM == "Windows":
         config_cmd.append("--toolchain=mingw")
+        mingw_sdk = os.environ.get("XMAKE_MINGW_SDK")
+        if mingw_sdk:
+            config_cmd.append(f"--mingw={mingw_sdk}")
 
     steps = [
         (f"Configure ({version})",      config_cmd),
