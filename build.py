@@ -142,7 +142,12 @@ def check_deps() -> bool:
         is_arch  = distro in ("arch", "cachyos", "manjaro", "endeavouros", "garuda")
         miss_arch, miss_apt = [], []
 
-        for label, check_fn, arch_pkg, apt_pkg in LINUX_DEPS:
+        # In non-interactive mode xmake downloads all library packages itself,
+        # so only require the tools that can't be auto-fetched.
+        deps = [(l, fn, ap, deb) for l, fn, ap, deb in LINUX_DEPS
+                if not NON_INTERACTIVE or l in ("xmake", "git")]
+
+        for label, check_fn, arch_pkg, apt_pkg in deps:
             if check_fn():
                 ok(label)
             else:
@@ -168,7 +173,7 @@ def check_deps() -> bool:
                     err("Automatic install failed — install manually and re-run.")
                     return False
                 # Re-check after install
-                still_missing = [l for l, fn, *_ in LINUX_DEPS if not fn()]
+                still_missing = [l for l, fn, *_ in deps if not fn()]
                 if still_missing:
                     err(f"Still missing after install: {', '.join(still_missing)}")
                     return False

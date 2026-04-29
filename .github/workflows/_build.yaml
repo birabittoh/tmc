@@ -28,6 +28,7 @@ jobs:
 
     env:
       XMAKE_GLOBALDIR: ${{ github.workspace }}/.xmake_global
+      PYTHONUTF8: "1"
 
     steps:
       - uses: actions/checkout@v4
