@@ -4,6 +4,7 @@ TMC PC Port — interactive build script
 Run from repository root: python3 build.py
 """
 
+import argparse
 import hashlib
 import os
 import platform
@@ -15,9 +16,10 @@ from typing import Optional
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-REPO_ROOT = Path(__file__).resolve().parent
-PLATFORM  = platform.system()   # Linux | Windows | Darwin
-EXE_NAME  = "tmc_pc.exe" if PLATFORM == "Windows" else "tmc_pc"
+REPO_ROOT       = Path(__file__).resolve().parent
+PLATFORM        = platform.system()   # Linux | Windows | Darwin
+EXE_NAME        = "tmc_pc.exe" if PLATFORM == "Windows" else "tmc_pc"
+NON_INTERACTIVE = False   # set to True when --usa/--eur flags are used
 
 def _read_sha1_file(filename: str) -> Optional[str]:
     p = REPO_ROOT / filename
@@ -54,6 +56,13 @@ def ok(m):         print(f"  \033[32m✓\033[0m  {m}")
 def warn(m):       print(f"  \033[33m!\033[0m  {m}")
 def err(m):        print(f"  \033[31m✗\033[0m  {m}")
 def info(m):       print(f"     {m}")
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="TMC PC Port builder")
+    p.add_argument("--usa", action="store_true", help="Build the USA version (non-interactive)")
+    p.add_argument("--eur", "--eu", dest="eur", action="store_true",
+                   help="Build the EU version (non-interactive)")
+    return p.parse_args()
 
 def prompt(msg: str, choices=None) -> str:
     suffix = f" [{'/'.join(choices)}]" if choices else ""
@@ -133,7 +142,12 @@ def check_deps() -> bool:
         is_arch  = distro in ("arch", "cachyos", "manjaro", "endeavouros", "garuda")
         miss_arch, miss_apt = [], []
 
-        for label, check_fn, arch_pkg, apt_pkg in LINUX_DEPS:
+        # In non-interactive mode xmake downloads all library packages itself,
+        # so only require the tools that can't be auto-fetched.
+        deps = [(l, fn, ap, deb) for l, fn, ap, deb in LINUX_DEPS
+                if not NON_INTERACTIVE or l in ("xmake", "git")]
+
+        for label, check_fn, arch_pkg, apt_pkg in deps:
             if check_fn():
                 ok(label)
             else:
@@ -149,6 +163,9 @@ def check_deps() -> bool:
             else:
                 info(f"  sudo apt install {' '.join(miss_apt)}")
             blank()
+            if NON_INTERACTIVE:
+                err("Missing dependencies — cannot auto-install in non-interactive mode.")
+                return False
             if prompt("Attempt automatic install?", ["y", "n"]) == "y":
                 cmd = (["sudo", "pacman", "-S", "--noconfirm"] + miss_arch if is_arch
                        else ["sudo", "apt", "install", "-y"] + miss_apt)
@@ -156,7 +173,7 @@ def check_deps() -> bool:
                     err("Automatic install failed — install manually and re-run.")
                     return False
                 # Re-check after install
-                still_missing = [l for l, fn, *_ in LINUX_DEPS if not fn()]
+                still_missing = [l for l, fn, *_ in deps if not fn()]
                 if still_missing:
                     err(f"Still missing after install: {', '.join(still_missing)}")
                     return False
@@ -243,7 +260,7 @@ def ensure_roms(selected: list, found: dict) -> dict:
                 continue
             info(f"Copy  {src}")
             info(f"  →   {target}")
-            if prompt("Proceed?", ["y", "n"]) == "y":
+            if NON_INTERACTIVE or prompt("Proceed?", ["y", "n"]) == "y":
                 shutil.copy2(src, target)
                 ok(f"Copied {target.name}")
                 result[v] = True
@@ -263,7 +280,9 @@ def ensure_roms(selected: list, found: dict) -> dict:
 def make_env() -> dict:
     env = os.environ.copy()
     env["XMAKE_ROOT"] = "y"
-    if PLATFORM == "Linux":
+    # In non-interactive (CI) mode let xmake download SDL3 rather than
+    # requiring the system package, which may not exist on the runner.
+    if PLATFORM == "Linux" and not NON_INTERACTIVE:
         env["XMAKE_USE_SYSTEM_SDL3"] = "1"
     return env
 
@@ -272,15 +291,26 @@ def build_version(version: str, env: dict) -> Optional[Path]:
 
     # Skip prompt if dist binary already exists
     dst_bin = dist_dir / EXE_NAME
-    if dst_bin.exists():
+    if dst_bin.exists() and not NON_INTERACTIVE:
         ans = prompt(f"{version} already built at dist/{version}/{EXE_NAME}. Rebuild?", ["y", "n"])
         if ans == "n":
             return dst_bin
 
     dist_dir.mkdir(parents=True, exist_ok=True)
 
+    # The codebase uses GCC-specific flags; force MinGW so xmake doesn't
+    # pick up MSVC on Windows runners.  If XMAKE_MINGW_SDK is set (CI),
+    # point xmake at that specific SDK (MSYS2) so it passes validation and
+    # uses the matching pkg-config to find system packages like libpng.
+    config_cmd = ["xmake", "f", "-y", f"--game_version={version}"]
+    if PLATFORM == "Windows":
+        config_cmd.append("--toolchain=mingw")
+        mingw_sdk = os.environ.get("XMAKE_MINGW_SDK")
+        if mingw_sdk:
+            config_cmd.append(f"--mingw={mingw_sdk}")
+
     steps = [
-        (f"Configure ({version})",      ["xmake", "f", "-y", f"--game_version={version}"]),
+        (f"Configure ({version})",      config_cmd),
         ("Extract assets",              ["xmake", "extract_assets"]),
         ("Convert assets",              ["xmake", "convert_assets"]),
         ("Build assets",                ["xmake", "build_assets"]),
@@ -337,6 +367,12 @@ def build_version(version: str, env: dict) -> Optional[Path]:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    global NON_INTERACTIVE
+
+    args = parse_args()
+    if args.usa or args.eur:
+        NON_INTERACTIVE = True
+
     header("TMC PC Port Builder")
     info(f"Platform : {PLATFORM}")
     info(f"Repo root: {REPO_ROOT}")
@@ -358,25 +394,34 @@ def main():
             else:
                 warn(f"{v}: not found")
 
-    section("Select Version")
-    keys = list(VERSIONS.keys())
-    for i, v in enumerate(keys, 1):
-        rom_ready = (
-            v in found
-            or (REPO_ROOT / VERSIONS[v]["rom_filename"]).exists()
-        )
-        tag = "\033[32mROM ready\033[0m" if rom_ready else "\033[31mROM missing\033[0m"
-        print(f"  {i}) {v:<6} [{tag}]")
-    print(f"  {len(keys) + 1}) Both")
-    print(f"  q) Quit")
+    if NON_INTERACTIVE:
+        # Build selected versions from flags
+        keys = list(VERSIONS.keys())
+        selected = []
+        if args.usa:
+            selected.append("USA")
+        if args.eur:
+            selected.append("EU")
+    else:
+        section("Select Version")
+        keys = list(VERSIONS.keys())
+        for i, v in enumerate(keys, 1):
+            rom_ready = (
+                v in found
+                or (REPO_ROOT / VERSIONS[v]["rom_filename"]).exists()
+            )
+            tag = "\033[32mROM ready\033[0m" if rom_ready else "\033[31mROM missing\033[0m"
+            print(f"  {i}) {v:<6} [{tag}]")
+        print(f"  {len(keys) + 1}) Both")
+        print(f"  q) Quit")
 
-    valid = [str(i) for i in range(1, len(keys) + 2)] + ["q"]
-    choice = prompt("Choice", valid)
-    if choice == "q":
-        sys.exit(0)
+        valid = [str(i) for i in range(1, len(keys) + 2)] + ["q"]
+        choice = prompt("Choice", valid)
+        if choice == "q":
+            sys.exit(0)
 
-    idx      = int(choice)
-    selected = keys if idx == len(keys) + 1 else [keys[idx - 1]]
+        idx      = int(choice)
+        selected = keys if idx == len(keys) + 1 else [keys[idx - 1]]
 
     section("Preparing ROMs")
     rom_ok    = ensure_roms(selected, found)
@@ -391,7 +436,7 @@ def main():
 
     blank()
     info(f"Will build: {', '.join(buildable)}")
-    if prompt("Start?", ["y", "n"]) == "n":
+    if not NON_INTERACTIVE and prompt("Start?", ["y", "n"]) == "n":
         sys.exit(0)
 
     env     = make_env()

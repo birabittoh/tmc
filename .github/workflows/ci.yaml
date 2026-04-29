@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      prefix: ${{ steps.set.outputs.prefix }}
+    steps:
+      - name: Compute artifact prefix
+        id: set
+        run: echo "prefix=$(date -u '+%Y%m%d%H%M')-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    uses: ./.github/workflows/_build.yaml
+    with:
+      artifact_name_prefix: ${{ needs.prepare.outputs.prefix }}
+    secrets: inherit

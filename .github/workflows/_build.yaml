@@ -1,0 +1,103 @@
+name: _build
+
+on:
+  workflow_call:
+    inputs:
+      artifact_name_prefix:
+        description: "Prefix for artifact names (e.g. 202604291859-abcd123 or v1.0.0)"
+        required: true
+        type: string
+    secrets:
+      ASSETS_TOKEN:
+        required: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        # To re-enable the EU build, add "EU" to the list below
+        version: [USA]
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      XMAKE_GLOBALDIR: ${{ github.workspace }}/.xmake_global
+      PYTHONUTF8: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.xmake_global
+          key: xmake-${{ runner.os }}-${{ hashFiles('xmake.lua') }}
+          restore-keys: |
+            xmake-${{ runner.os }}-
+
+      - name: Install libpng and zlib via MSYS2 (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          /c/msys64/usr/bin/pacman.exe -S --noconfirm --needed \
+            mingw-w64-x86_64-libpng \
+            mingw-w64-x86_64-zlib
+          echo "C:/msys64/mingw64/bin" >> "$GITHUB_PATH"
+          echo "PKG_CONFIG_PATH=C:/msys64/mingw64/lib/pkgconfig" >> "$GITHUB_ENV"
+          echo "XMAKE_MINGW_SDK=C:/msys64/mingw64" >> "$GITHUB_ENV"
+
+      - name: Fetch ROMs
+        shell: bash
+        env:
+          ASSETS_TOKEN: ${{ secrets.ASSETS_TOKEN }}
+          ASSETS_REPO: ${{ vars.ASSETS_REPO }}
+        run: |
+          git clone "https://x-access-token:${ASSETS_TOKEN}@github.com/${ASSETS_REPO}.git" _roms
+          cp _roms/baserom.gba .
+          cp _roms/baserom_eu.gba .
+          rm -rf _roms
+
+      - name: Build (${{ matrix.version }})
+        shell: bash
+        run: |
+          if [ "${{ matrix.version }}" = "USA" ]; then
+            python3 build.py --usa
+          else
+            python3 build.py --eur
+          fi
+
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          mkdir -p artifact
+          # Game binary only — no assets/ or assets_src/ (copyrighted ROM data)
+          cp "dist/${{ matrix.version }}/tmc_pc"* artifact/
+          # Asset extractor utility so users can extract from their own ROM
+          cp "build/pc/asset_extractor"* artifact/ 2>/dev/null || true
+
+      - name: Compute artifact name
+        id: artifact_name
+        shell: bash
+        run: |
+          version_lower=$(echo "${{ matrix.version }}" | tr '[:upper:]' '[:lower:]')
+          echo "name=tmc-${{ inputs.artifact_name_prefix }}-${{ matrix.platform }}-${version_lower}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact_name.outputs.name }}
+          path: artifact/
+          if-no-files-found: error
