@@ -49,7 +49,7 @@ if use_system_packages then
 else
     add_requires("nlohmann_json", {configs = {cmake = false}})
     add_requires("fmt", {configs = {header_only = true}})
-    add_requires("libpng")
+    add_requires("libpng", {configs = {intel_sse = false}})
     add_requires("zlib")
     add_requires("libsdl3", {configs = {shared = false}})
     add_requires("nlohmann_json", {configs = {cmake = false}})
