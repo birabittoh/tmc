@@ -49,8 +49,17 @@ if use_system_packages then
 else
     add_requires("nlohmann_json", {configs = {cmake = false}})
     add_requires("fmt", {configs = {header_only = true}})
-    add_requires("libpng", {configs = {intel_sse = false}})
-    add_requires("zlib")
+    -- On Windows, building libpng from source with MinGW fails because the
+    -- package's SSE2 code is unconditionally compiled and the intrinsics
+    -- headers are incompatible.  Use MSYS2's pre-built package instead
+    -- (installed by CI; interactive Windows users need MSYS2 mingw64 libpng).
+    if is_host("windows") then
+        add_requires("libpng", {system = true})
+        add_requires("zlib", {system = true})
+    else
+        add_requires("libpng")
+        add_requires("zlib")
+    end
     add_requires("libsdl3", {configs = {shared = false}})
     add_requires("nlohmann_json", {configs = {cmake = false}})
 end
