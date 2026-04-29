@@ -91,7 +91,9 @@ Info.plist
 ctx.c
 !doxygen_config.py
 
+!build.py
 .xmake
 build/
 .vscode/
 rom_data/
+dist/
