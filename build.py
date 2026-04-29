@@ -286,8 +286,13 @@ def build_version(version: str, env: dict, non_interactive: bool = False) -> Opt
 
     dist_dir.mkdir(parents=True, exist_ok=True)
 
+    configure_cmd = ["xmake", "f", "-y", f"--game_version={version}"]
+    toolchain = env.get("TMC_XMAKE_TOOLCHAIN", "").strip()
+    if toolchain:
+        configure_cmd.append(f"--toolchain={toolchain}")
+
     steps = [
-        (f"Configure ({version})",      ["xmake", "f", "-y", f"--game_version={version}"]),
+        (f"Configure ({version})",      configure_cmd),
         ("Extract assets",              ["xmake", "extract_assets"]),
         ("Convert assets",              ["xmake", "convert_assets"]),
         ("Build assets",                ["xmake", "build_assets"]),

@@ -60,6 +60,10 @@ jobs:
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
 
+      - name: Install LLVM (Windows)
+        if: matrix.os_name == 'windows'
+        run: choco install llvm -y
+
       - name: Checkout private assets repository
         uses: actions/checkout@v4
         with:
@@ -73,7 +77,14 @@ jobs:
           cp _assets/baserom.gba ./baserom.gba
           cp _assets/baserom_eu.gba ./baserom_eu.gba
 
-      - name: Build selected region (non-interactive)
+      - name: Build selected region (non-interactive, Linux)
+        if: matrix.os_name == 'linux'
+        run: python build.py ${{ matrix.flag }}
+
+      - name: Build selected region (non-interactive, Windows)
+        if: matrix.os_name == 'windows'
+        env:
+          TMC_XMAKE_TOOLCHAIN: clang
         run: python build.py ${{ matrix.flag }}
 
       - name: Prepare artifact payload
