@@ -17,7 +17,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        version: [USA, EU]
+        # To re-enable the EU build, add "EU" to the list below
+        version: [USA]
         include:
           - os: ubuntu-latest
             platform: linux

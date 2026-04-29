@@ -298,8 +298,14 @@ def build_version(version: str, env: dict) -> Optional[Path]:
 
     dist_dir.mkdir(parents=True, exist_ok=True)
 
+    # The codebase uses GCC-specific flags; force MinGW so xmake doesn't
+    # pick up MSVC on Windows runners.
+    config_cmd = ["xmake", "f", "-y", f"--game_version={version}"]
+    if PLATFORM == "Windows":
+        config_cmd.append("--toolchain=mingw")
+
     steps = [
-        (f"Configure ({version})",      ["xmake", "f", "-y", f"--game_version={version}"]),
+        (f"Configure ({version})",      config_cmd),
         ("Extract assets",              ["xmake", "extract_assets"]),
         ("Convert assets",              ["xmake", "convert_assets"]),
         ("Build assets",                ["xmake", "build_assets"]),
