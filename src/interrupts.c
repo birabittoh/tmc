@@ -92,7 +92,6 @@ void UpdateDisplayControls(void) {
         gOAMControls.field_0x0 = 0;
 
         DmaCopy32(3, &gOAMControls.oam, OAM, OAM_SIZE);
-
     }
     sub_08016CA8(&gScreen.bg0);
     sub_08016CA8(&gScreen.bg1);

@@ -157,7 +157,8 @@ void sub_0806DB84(Entity* this, ScriptExecutionContext* context) {
     if (ent != NULL) {
         PositionRelative(this, &ent->base, Q_16_16(-8.0), 0);
 #ifdef PC_PORT
-        Port_SetEntityScriptCtx(&ent->base, StartCutscene(&ent->base, PORT_SCRIPT(script_MinishVillageObjectLeftStoneOpening)));
+        Port_SetEntityScriptCtx(&ent->base,
+                                StartCutscene(&ent->base, PORT_SCRIPT(script_MinishVillageObjectLeftStoneOpening)));
 #else
         *(ScriptExecutionContext**)&ent->cutsceneBeh =
             StartCutscene(&ent->base, &script_MinishVillageObjectLeftStoneOpening);
@@ -167,7 +168,8 @@ void sub_0806DB84(Entity* this, ScriptExecutionContext* context) {
     if (ent != NULL) {
         PositionRelative(this, &ent->base, Q_16_16(8.0), 0);
 #ifdef PC_PORT
-        Port_SetEntityScriptCtx(&ent->base, StartCutscene(&ent->base, PORT_SCRIPT(script_MinishVillageObjectRightStoneOpening)));
+        Port_SetEntityScriptCtx(&ent->base,
+                                StartCutscene(&ent->base, PORT_SCRIPT(script_MinishVillageObjectRightStoneOpening)));
 #else
         *(ScriptExecutionContext**)&ent->cutsceneBeh =
             StartCutscene(&ent->base, &script_MinishVillageObjectRightStoneOpening);

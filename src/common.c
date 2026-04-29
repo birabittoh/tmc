@@ -982,11 +982,11 @@ void sub_0801E290(u32 param_1, u32 param_2, u32 count) {
             iVar4 = 0xf0;
         }
         if (((u16)uVar5 & 0xffff) < 0xa0) {
-            base[uVar5 * 2]     = iVar4;
+            base[uVar5 * 2] = iVar4;
             base[uVar5 * 2 + 1] = iVar2;
         }
         if (((u16)uVar7 & 0xffff) < 0xa0) {
-            base[uVar7 * 2]     = iVar4;
+            base[uVar7 * 2] = iVar4;
             base[uVar7 * 2 + 1] = iVar2;
         }
         uVar5--;

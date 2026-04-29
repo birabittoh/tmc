@@ -38,14 +38,14 @@ void sub_0805E1F8(u32, bool32);
 
 void EnterRoomTextboxManager_Main(EnterRoomTextboxManager* this) {
 #ifdef PC_PORT
-    fprintf(stderr, "[AREA] textbox main ptr=%p action=%u room=%u saved_room=%u msg=0x%X\n", (void*)this,
-            super->action, gRoomControls.room, this->unk_20, gMessage.state);
+    fprintf(stderr, "[AREA] textbox main ptr=%p action=%u room=%u saved_room=%u msg=0x%X\n", (void*)this, super->action,
+            gRoomControls.room, this->unk_20, gMessage.state);
 #endif
     EnterRoomTextboxManager_Actions[super->action](this);
 #ifdef PC_PORT
     if (gRoomControls.room != this->unk_20) {
-        fprintf(stderr, "[AREA] textbox kill: cur_room=%u saved_room=%u area=%u timer=%u\n",
-                gRoomControls.room, this->unk_20, gRoomControls.area, super->timer);
+        fprintf(stderr, "[AREA] textbox kill: cur_room=%u saved_room=%u area=%u timer=%u\n", gRoomControls.room,
+                this->unk_20, gRoomControls.area, super->timer);
         sub_0805E1D8(this);
     }
 #else
@@ -63,10 +63,8 @@ void sub_0805E140(EnterRoomTextboxManager* this) {
     super->subtimer = 60;
     SetEntityPriority((Entity*)this, PRIO_HIGHEST);
 #ifdef PC_PORT
-    fprintf(stderr,
-            "[AREA] textbox init area=%u room=%u loc=%u text=0x%03X dungeon=%u\n",
-            gRoomControls.area, gRoomControls.room, gArea.locationIndex,
-            gUnk_08108DE8[gArea.locationIndex], AreaIsDungeon());
+    fprintf(stderr, "[AREA] textbox init area=%u room=%u loc=%u text=0x%03X dungeon=%u\n", gRoomControls.area,
+            gRoomControls.room, gArea.locationIndex, gUnk_08108DE8[gArea.locationIndex], AreaIsDungeon());
 #endif
     sub_0805E1F8(gUnk_08108DE8[gArea.locationIndex], AreaIsDungeon());
 }

@@ -882,4 +882,3 @@ void TownMinish_Fusion(Entity* this) {
         GetNextFrame(this);
     }
 }
-

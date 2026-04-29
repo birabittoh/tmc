@@ -47,10 +47,16 @@ SHA1_TO_VERSION = {
 
 W = 64
 
-def hr(ch="─"):    print(ch * W)
+def _safe_print(s: str):
+    try:
+        print(s)
+    except UnicodeEncodeError:
+        print(s.encode("ascii", "replace").decode("ascii"))
+
+def hr(ch="─"):    _safe_print(ch * W)
 def blank():       print()
-def header(t):     hr("═"); print(f"  {t}"); hr("═")
-def section(t):    blank(); hr(); print(f"  {t}"); hr()
+def header(t):     hr("="); _safe_print(f"  {t}"); hr("=")
+def section(t):    blank(); hr(); _safe_print(f"  {t}"); hr()
 def ok(m):         print(f"  \033[32m✓\033[0m  {m}")
 def warn(m):       print(f"  \033[33m!\033[0m  {m}")
 def err(m):        print(f"  \033[31m✗\033[0m  {m}")
