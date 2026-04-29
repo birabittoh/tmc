@@ -35,7 +35,7 @@ jobs:
       artifact_name_windows_usa: ${{ steps.names.outputs.artifact_name_windows_usa }}
       artifact_name_windows_eur: ${{ steps.names.outputs.artifact_name_windows_eur }}
     env:
-      ASSETS_REPO: ${{ vars.TMC_ASSETS_REPO }}
+      ASSETS_REPO: ${{ vars.USERNAME_REPO_NAME }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,7 +45,7 @@ jobs:
         shell: bash
         run: |
           if [[ -z "${ASSETS_REPO}" ]]; then
-            echo "Missing repository variable TMC_ASSETS_REPO (example: birabittoh/tmc-assets)."
+            echo "Missing repository variable USERNAME_REPO_NAME (example: birabittoh/tmc-assets)."
             exit 1
           fi
 
