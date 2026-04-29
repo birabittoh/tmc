@@ -4,6 +4,7 @@ TMC PC Port — interactive build script
 Run from repository root: python3 build.py
 """
 
+import argparse
 import hashlib
 import os
 import platform
@@ -55,7 +56,14 @@ def warn(m):       print(f"  \033[33m!\033[0m  {m}")
 def err(m):        print(f"  \033[31m✗\033[0m  {m}")
 def info(m):       print(f"     {m}")
 
-def prompt(msg: str, choices=None) -> str:
+def prompt(msg: str, choices=None, non_interactive: bool = False, default: Optional[str] = None) -> str:
+    if non_interactive:
+        if default is not None:
+            return default
+        if choices:
+            return choices[0]
+        return ""
+
     suffix = f" [{'/'.join(choices)}]" if choices else ""
     while True:
         try:
@@ -336,7 +344,18 @@ def build_version(version: str, env: dict) -> Optional[Path]:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build TMC PC port")
+    parser.add_argument("--usa", action="store_true", help="Build USA version")
+    parser.add_argument("--eur", action="store_true", help="Build EU version")
+    parser.add_argument("--non-interactive", action="store_true", help="Disable prompts and use defaults")
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    non_interactive = args.non_interactive or args.usa or args.eur
+
     header("TMC PC Port Builder")
     info(f"Platform : {PLATFORM}")
     info(f"Repo root: {REPO_ROOT}")
@@ -358,30 +377,37 @@ def main():
             else:
                 warn(f"{v}: not found")
 
-    section("Select Version")
-    keys = list(VERSIONS.keys())
-    for i, v in enumerate(keys, 1):
-        rom_ready = (
-            v in found
-            or (REPO_ROOT / VERSIONS[v]["rom_filename"]).exists()
-        )
-        tag = "\033[32mROM ready\033[0m" if rom_ready else "\033[31mROM missing\033[0m"
-        print(f"  {i}) {v:<6} [{tag}]")
-    print(f"  {len(keys) + 1}) Both")
-    print(f"  q) Quit")
+    selected = []
+    if args.usa:
+        selected.append("USA")
+    if args.eur:
+        selected.append("EU")
 
-    valid = [str(i) for i in range(1, len(keys) + 2)] + ["q"]
-    choice = prompt("Choice", valid)
-    if choice == "q":
-        sys.exit(0)
+    if not selected:
+        section("Select Version")
+        keys = list(VERSIONS.keys())
+        for i, v in enumerate(keys, 1):
+            rom_ready = (
+                v in found
+                or (REPO_ROOT / VERSIONS[v]["rom_filename"]).exists()
+            )
+            tag = "\033[32mROM ready\033[0m" if rom_ready else "\033[31mROM missing\033[0m"
+            print(f"  {i}) {v:<6} [{tag}]")
+        print(f"  {len(keys) + 1}) Both")
+        print(f"  q) Quit")
 
-    idx      = int(choice)
-    selected = keys if idx == len(keys) + 1 else [keys[idx - 1]]
+        valid = [str(i) for i in range(1, len(keys) + 2)] + ["q"]
+        choice = prompt("Choice", valid, non_interactive=non_interactive)
+        if choice == "q":
+            sys.exit(0)
+
+        idx = int(choice)
+        selected = keys if idx == len(keys) + 1 else [keys[idx - 1]]
 
     section("Preparing ROMs")
-    rom_ok    = ensure_roms(selected, found)
+    rom_ok = ensure_roms(selected, found)
     buildable = [v for v in selected if rom_ok.get(v)]
-    skipped   = [v for v in selected if not rom_ok.get(v)]
+    skipped = [v for v in selected if not rom_ok.get(v)]
 
     if skipped:
         warn(f"Skipping (no ROM): {', '.join(skipped)}")
@@ -391,10 +417,10 @@ def main():
 
     blank()
     info(f"Will build: {', '.join(buildable)}")
-    if prompt("Start?", ["y", "n"]) == "n":
+    if prompt("Start?", ["y", "n"], non_interactive=non_interactive, default="y") == "n":
         sys.exit(0)
 
-    env     = make_env()
+    env = make_env()
     results = {}
     for v in buildable:
         section(f"Building {v}")

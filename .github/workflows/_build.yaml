@@ -1,0 +1,128 @@
+name: Reusable Build
+
+on:
+  workflow_call:
+    inputs:
+      ref_name:
+        required: true
+        type: string
+      artifact_suffix:
+        required: false
+        type: string
+    secrets:
+      TMC_ASSETS_PAT:
+        required: true
+    outputs:
+      artifact_name_linux_usa:
+        value: ${{ jobs.build.outputs.artifact_name_linux_usa }}
+      artifact_name_linux_eur:
+        value: ${{ jobs.build.outputs.artifact_name_linux_eur }}
+      artifact_name_windows_usa:
+        value: ${{ jobs.build.outputs.artifact_name_windows_usa }}
+      artifact_name_windows_eur:
+        value: ${{ jobs.build.outputs.artifact_name_windows_eur }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    outputs:
+      artifact_name_linux_usa: ${{ steps.names.outputs.artifact_name_linux_usa }}
+      artifact_name_linux_eur: ${{ steps.names.outputs.artifact_name_linux_eur }}
+      artifact_name_windows_usa: ${{ steps.names.outputs.artifact_name_windows_usa }}
+      artifact_name_windows_eur: ${{ steps.names.outputs.artifact_name_windows_eur }}
+    env:
+      ASSETS_REPO: ${{ vars.TMC_ASSETS_REPO }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Validate assets repo variable
+        shell: bash
+        run: |
+          if [[ -z "${ASSETS_REPO}" ]]; then
+            echo "Missing repository variable TMC_ASSETS_REPO (example: birabittoh/tmc-assets)."
+            exit 1
+          fi
+
+      - name: Checkout private assets repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ASSETS_REPO }}
+          token: ${{ secrets.TMC_ASSETS_PAT }}
+          path: private-assets
+
+      - name: Place ROMs
+        shell: bash
+        run: |
+          cp private-assets/baserom.gba ./baserom.gba
+          cp private-assets/baserom_eu.gba ./baserom_eu.gba
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xmake git libsdl3-dev libpng-dev libfmt-dev nlohmann-json3-dev
+
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install -y xmake
+
+      - name: Build USA + EU
+        shell: bash
+        run: python3 build.py --non-interactive --usa --eur
+
+      - name: Prepare artifacts
+        shell: bash
+        run: |
+          mkdir -p out
+          cp -r dist/USA out/USA
+          cp -r dist/EU out/EU
+          cp -r build/pc/assets_src out/assets_src
+          cp -r build/pc/assets out/assets
+
+      - name: Compute artifact names
+        id: names
+        shell: bash
+        run: |
+          OS=$(echo "${{ runner.os }}" | tr '[:upper:]' '[:lower:]')
+          SHORT_SHA="${GITHUB_SHA::7}"
+          if [[ -n "${{ inputs.artifact_suffix }}" ]]; then
+            SUFFIX="${{ inputs.artifact_suffix }}"
+          else
+            SUFFIX="$(date -u +%Y%m%d%H%M)-${SHORT_SHA}"
+          fi
+          USA="tmc-${OS}-usa-${SUFFIX}"
+          EUR="tmc-${OS}-eur-${SUFFIX}"
+          tar -czf "${USA}.tar.gz" -C out USA assets assets_src
+          tar -czf "${EUR}.tar.gz" -C out EU assets assets_src
+          echo "usa=${USA}" >> "$GITHUB_OUTPUT"
+          echo "eur=${EUR}" >> "$GITHUB_OUTPUT"
+          if [[ "$OS" == "linux" ]]; then
+            echo "artifact_name_linux_usa=${USA}" >> "$GITHUB_OUTPUT"
+            echo "artifact_name_linux_eur=${EUR}" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact_name_windows_usa=${USA}" >> "$GITHUB_OUTPUT"
+            echo "artifact_name_windows_eur=${EUR}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.names.outputs.usa }}
+          path: ${{ steps.names.outputs.usa }}.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.names.outputs.eur }}
+          path: ${{ steps.names.outputs.eur }}.tar.gz
