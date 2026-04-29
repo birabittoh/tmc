@@ -1,0 +1,14 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    uses: ./.github/workflows/_build.yaml
+    with:
+      ref_name: ${{ github.ref_name }}
+    secrets:
+      TMC_ASSETS_PAT: ${{ secrets.TMC_ASSETS_PAT }}
