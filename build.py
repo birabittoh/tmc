@@ -4,6 +4,7 @@ TMC PC Port — interactive build script
 Run from repository root: python3 build.py
 """
 
+import argparse
 import hashlib
 import os
 import platform
@@ -125,7 +126,7 @@ WIN_DEPS = [
     ("git",   lambda: bool(shutil.which("git"))),
 ]
 
-def check_deps() -> bool:
+def check_deps(non_interactive: bool = False) -> bool:
     all_ok = True
 
     if PLATFORM == "Linux":
@@ -149,7 +150,9 @@ def check_deps() -> bool:
             else:
                 info(f"  sudo apt install {' '.join(miss_apt)}")
             blank()
-            if prompt("Attempt automatic install?", ["y", "n"]) == "y":
+            if non_interactive:
+                all_ok = False
+            elif prompt("Attempt automatic install?", ["y", "n"]) == "y":
                 cmd = (["sudo", "pacman", "-S", "--noconfirm"] + miss_arch if is_arch
                        else ["sudo", "apt", "install", "-y"] + miss_apt)
                 if run_cmd(cmd, check=False).returncode != 0:
@@ -217,7 +220,7 @@ def scan_roms() -> dict:
                 found[version] = gba
     return found
 
-def ensure_roms(selected: list, found: dict) -> dict:
+def ensure_roms(selected: list, found: dict, non_interactive: bool = False) -> dict:
     """Ensure each selected ROM is at REPO_ROOT/<rom_filename>. Returns {version: bool}."""
     result = {}
     for v in selected:
@@ -243,7 +246,7 @@ def ensure_roms(selected: list, found: dict) -> dict:
                 continue
             info(f"Copy  {src}")
             info(f"  →   {target}")
-            if prompt("Proceed?", ["y", "n"]) == "y":
+            if non_interactive or prompt("Proceed?", ["y", "n"]) == "y":
                 shutil.copy2(src, target)
                 ok(f"Copied {target.name}")
                 result[v] = True
@@ -267,12 +270,12 @@ def make_env() -> dict:
         env["XMAKE_USE_SYSTEM_SDL3"] = "1"
     return env
 
-def build_version(version: str, env: dict) -> Optional[Path]:
+def build_version(version: str, env: dict, non_interactive: bool = False) -> Optional[Path]:
     dist_dir = REPO_ROOT / "dist" / version
 
     # Skip prompt if dist binary already exists
     dst_bin = dist_dir / EXE_NAME
-    if dst_bin.exists():
+    if dst_bin.exists() and not non_interactive:
         ans = prompt(f"{version} already built at dist/{version}/{EXE_NAME}. Rebuild?", ["y", "n"])
         if ans == "n":
             return dst_bin
@@ -336,13 +339,23 @@ def build_version(version: str, env: dict) -> Optional[Path]:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="TMC PC Port build helper")
+    parser.add_argument("--usa", action="store_true", help="Build USA version without prompts")
+    parser.add_argument("--eur", action="store_true", help="Build EU version without prompts")
+    return parser.parse_args()
+
 def main():
+    args = parse_args()
+    non_interactive = args.usa or args.eur
+
     header("TMC PC Port Builder")
     info(f"Platform : {PLATFORM}")
     info(f"Repo root: {REPO_ROOT}")
 
     section("Dependencies")
-    if not check_deps():
+    if not check_deps(non_interactive=non_interactive):
         err("Fix missing dependencies and re-run.")
         sys.exit(1)
 
@@ -358,28 +371,37 @@ def main():
             else:
                 warn(f"{v}: not found")
 
-    section("Select Version")
     keys = list(VERSIONS.keys())
-    for i, v in enumerate(keys, 1):
-        rom_ready = (
-            v in found
-            or (REPO_ROOT / VERSIONS[v]["rom_filename"]).exists()
-        )
-        tag = "\033[32mROM ready\033[0m" if rom_ready else "\033[31mROM missing\033[0m"
-        print(f"  {i}) {v:<6} [{tag}]")
-    print(f"  {len(keys) + 1}) Both")
-    print(f"  q) Quit")
+    if non_interactive:
+        selected = []
+        if args.usa:
+            selected.append("USA")
+        if args.eur:
+            selected.append("EU")
+        info("Non-interactive mode enabled via --usa/--eur")
+        info(f"Selected: {', '.join(selected)}")
+    else:
+        section("Select Version")
+        for i, v in enumerate(keys, 1):
+            rom_ready = (
+                v in found
+                or (REPO_ROOT / VERSIONS[v]["rom_filename"]).exists()
+            )
+            tag = "\033[32mROM ready\033[0m" if rom_ready else "\033[31mROM missing\033[0m"
+            print(f"  {i}) {v:<6} [{tag}]")
+        print(f"  {len(keys) + 1}) Both")
+        print(f"  q) Quit")
 
-    valid = [str(i) for i in range(1, len(keys) + 2)] + ["q"]
-    choice = prompt("Choice", valid)
-    if choice == "q":
-        sys.exit(0)
+        valid = [str(i) for i in range(1, len(keys) + 2)] + ["q"]
+        choice = prompt("Choice", valid)
+        if choice == "q":
+            sys.exit(0)
 
-    idx      = int(choice)
-    selected = keys if idx == len(keys) + 1 else [keys[idx - 1]]
+        idx = int(choice)
+        selected = keys if idx == len(keys) + 1 else [keys[idx - 1]]
 
     section("Preparing ROMs")
-    rom_ok    = ensure_roms(selected, found)
+    rom_ok = ensure_roms(selected, found, non_interactive=non_interactive)
     buildable = [v for v in selected if rom_ok.get(v)]
     skipped   = [v for v in selected if not rom_ok.get(v)]
 
@@ -391,14 +413,14 @@ def main():
 
     blank()
     info(f"Will build: {', '.join(buildable)}")
-    if prompt("Start?", ["y", "n"]) == "n":
+    if not non_interactive and prompt("Start?", ["y", "n"]) == "n":
         sys.exit(0)
 
     env     = make_env()
     results = {}
     for v in buildable:
         section(f"Building {v}")
-        results[v] = build_version(v, env)
+        results[v] = build_version(v, env, non_interactive=non_interactive)
 
     section("Done")
     any_ok = False
@@ -410,7 +432,8 @@ def main():
             blank()
             info(f"  Run {v}:")
             info(f"    cd {rel}")
-            info(f"    ./{EXE_NAME}")
+            run_cmd = f".\\{EXE_NAME}" if PLATFORM == "Windows" else f"./{EXE_NAME}"
+            info(f"    {run_cmd}")
             blank()
         else:
             err(f"{v} — build failed")
