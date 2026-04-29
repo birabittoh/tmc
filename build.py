@@ -46,14 +46,20 @@ SHA1_TO_VERSION = {
 # ── UI helpers ────────────────────────────────────────────────────────────────
 
 W = 64
+USE_UNICODE_UI = PLATFORM != "Windows"
 
-def hr(ch="─"):    print(ch * W)
+def _ui_char(unicode_ch: str, ascii_ch: str) -> str:
+    return unicode_ch if USE_UNICODE_UI else ascii_ch
+
+def hr(ch=None):
+    ch = ch or _ui_char("─", "-")
+    print(ch * W)
 def blank():       print()
-def header(t):     hr("═"); print(f"  {t}"); hr("═")
+def header(t):     hr(_ui_char("═", "=")); print(f"  {t}"); hr(_ui_char("═", "="))
 def section(t):    blank(); hr(); print(f"  {t}"); hr()
-def ok(m):         print(f"  \033[32m✓\033[0m  {m}")
-def warn(m):       print(f"  \033[33m!\033[0m  {m}")
-def err(m):        print(f"  \033[31m✗\033[0m  {m}")
+def ok(m):         print(f"  \033[32m{_ui_char('✓', 'OK')}\033[0m  {m}")
+def warn(m):       print(f"  \033[33m{_ui_char('!', 'WARN')}\033[0m  {m}")
+def err(m):        print(f"  \033[31m{_ui_char('✗', 'ERR')}\033[0m  {m}")
 def info(m):       print(f"     {m}")
 
 def prompt(msg: str, choices=None) -> str:
@@ -266,7 +272,7 @@ def ensure_roms(selected: list, found: dict, non_interactive: bool = False) -> d
 def make_env() -> dict:
     env = os.environ.copy()
     env["XMAKE_ROOT"] = "y"
-    if PLATFORM == "Linux":
+    if PLATFORM == "Linux" and pkg_config_ok("sdl3"):
         env["XMAKE_USE_SYSTEM_SDL3"] = "1"
     return env
 
