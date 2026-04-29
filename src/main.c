@@ -264,7 +264,7 @@ void DisableVBlankDMA(void) {
 }
 
 void SetSleepMode(void) {
-    //simulate a sleep
+    // simulate a sleep
     Main* main;
 
     REG_DISPCNT = DISPCNT_FORCED_BLANK;
@@ -278,7 +278,7 @@ void SetSleepMode(void) {
     } while (REG_KEYINPUT == 0x03FF);
 
     main = &gMain;
-    *(vu8*)&main->sleepStatus; 
+    *(vu8*)&main->sleepStatus;
     main->sleepStatus = DEFAULT;
     return;
 }

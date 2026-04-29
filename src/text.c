@@ -59,7 +59,7 @@ extern WStruct gUnk_02036540[4];
 
 extern u32* gTranslations[];
 extern u8* gTextVariableSources[];
-extern u32 gUnk_08109244;   // TODO structure?
+extern u32 gUnk_08109244; // TODO structure?
 extern u32* gUnk_08109248[];
 extern u32 gUnk_0810926C[];
 extern void* gUnk_081092AC[]; // TODO structure?
@@ -537,8 +537,8 @@ u32 ShowTextBox(uintptr_t textIndexOrPtr, const Font* paramFont) {
 
     pWVar4 = sub_0805F2C8();
 #ifdef PC_PORT
-    fprintf(stderr, "[TEXTBOX] ShowTextBox ptr=0x%lX pWVar4=%s\n",
-            (unsigned long)textIndexOrPtr, pWVar4 ? "ok" : "NULL");
+    fprintf(stderr, "[TEXTBOX] ShowTextBox ptr=0x%lX pWVar4=%s\n", (unsigned long)textIndexOrPtr,
+            pWVar4 ? "ok" : "NULL");
 #endif
     if (pWVar4 != NULL) {
 #ifdef PC_PORT

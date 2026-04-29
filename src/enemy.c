@@ -58,7 +58,7 @@ const EnemyDefinition gEnemyDefinitions[] = {
 #ifdef EU
     { 259, 5, { &gHitbox_0 }, 344, { 0, 1, 1, 1 }, 255, 0, 64, 139 }, // TODO sprite index too high
 #else
-    { 259, 5, { &gHitbox_0 }, 345, { 0, 1, 1, 1 }, 255, 0, 64, 139 },     // TODO sprite index too high
+    { 259, 5, { &gHitbox_0 }, 345, { 0, 1, 1, 1 }, 255, 0, 64, 139 }, // TODO sprite index too high
 #endif
     MULTI_FORM(gEnemyDefinition_7),
     { 7, 112, { &gHitbox_8 }, SPRITE_KEESE, { 0, 1, 1, 0 }, 2, 256, 32, 15 },
@@ -68,7 +68,7 @@ const EnemyDefinition gEnemyDefinitions[] = {
 #ifdef EU
     { 463, 0, { &gHitbox_27 }, 494, { 1, 1, 1, 0 }, 255, 256, 4, 1 }, // TODO sprite index too high
 #else
-    { 463, 0, { &gHitbox_27 }, 495, { 1, 1, 1, 0 }, 255, 256, 4, 1 },     // TODO sprite index too high
+    { 463, 0, { &gHitbox_27 }, 495, { 1, 1, 1, 0 }, 255, 256, 4, 1 }, // TODO sprite index too high
 #endif
     MULTI_FORM(gEnemyDefinition_D),
     { 0, 0, { &gHitbox_0 }, SPRITE_0, { 0, 0, 0, 1 }, 255, 256, 0, 139 },
@@ -151,7 +151,7 @@ const EnemyDefinition gEnemyDefinitions[] = {
 #ifdef EU
     { 423, 0, { &gHitbox_4 }, 490, { 0, 1, 1, 1 }, 255, 256, 110, 4 }, // TODO sprite index too high
 #else
-    { 423, 0, { &gHitbox_4 }, 491, { 0, 1, 1, 1 }, 255, 256, 110, 4 },    // TODO sprite index too high
+    { 423, 0, { &gHitbox_4 }, 491, { 0, 1, 1, 1 }, 255, 256, 110, 4 }, // TODO sprite index too high
 #endif
     { 16400, 313, { &gHitbox_6 }, SPRITE_VAATIBALL, { 0, 0, 0, 0 }, 255, 1280, 43, 139 },
     MULTI_FORM(gEnemyDefinition_0),

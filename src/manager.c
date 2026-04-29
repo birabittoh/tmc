@@ -81,7 +81,8 @@ void ManagerUpdate(Entity* this) {
 
 #ifdef PC_PORT
     if (this->id == ENTER_ROOM_TEXTBOX_MANAGER) {
-        fprintf(stderr, "[MANAGER] dispatch ENTER_ROOM_TEXTBOX_MANAGER ptr=%p type=%u type2=%u action=%u room=%u area=%u\n",
+        fprintf(stderr,
+                "[MANAGER] dispatch ENTER_ROOM_TEXTBOX_MANAGER ptr=%p type=%u type2=%u action=%u room=%u area=%u\n",
                 (void*)this, this->type, this->type2, this->action, gRoomControls.room, gRoomControls.area);
     }
 #endif

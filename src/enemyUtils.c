@@ -25,8 +25,7 @@ static int Port_IsEntityInPool(const Entity* ptr) {
     const u8* p = (const u8*)ptr;
     if (p >= (const u8*)&gPlayerEntity && p < (const u8*)(&gPlayerEntity + 1))
         return 1;
-    if (p >= (const u8*)gAuxPlayerEntities &&
-        p < (const u8*)(gAuxPlayerEntities + MAX_AUX_PLAYER_ENTITIES))
+    if (p >= (const u8*)gAuxPlayerEntities && p < (const u8*)(gAuxPlayerEntities + MAX_AUX_PLAYER_ENTITIES))
         return 1;
     if (p >= (const u8*)gEntities && p < (const u8*)(gEntities + MAX_ENTITIES))
         return 1;

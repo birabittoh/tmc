@@ -40,7 +40,8 @@
 // Get the IDE to stfu
 
 // We define it this way to fool preproc.
-#define INCBIN(...) { 0 }
+#define INCBIN(...) \
+    { 0 }
 #define INCBIN_U8 INCBIN
 #define INCBIN_U16 INCBIN
 #define INCBIN_U32 INCBIN
@@ -86,11 +87,13 @@
 #ifdef PC_PORT
 #define PORT_STATIC_ASSERT_SIZE(type, gba_size, pc_size, msg) static_assert(sizeof(type) == (pc_size), msg)
 #define PORT_STATIC_ASSERT_EXPR(expr, gba_size, pc_size, msg) static_assert((expr) == (pc_size), msg)
-#define PORT_STATIC_ASSERT_OFFSET(type, field, gba_off, pc_off, msg) static_assert(offsetof(type, field) == (pc_off), msg)
+#define PORT_STATIC_ASSERT_OFFSET(type, field, gba_off, pc_off, msg) \
+    static_assert(offsetof(type, field) == (pc_off), msg)
 #else
 #define PORT_STATIC_ASSERT_SIZE(type, gba_size, pc_size, msg) static_assert(sizeof(type) == (gba_size), msg)
 #define PORT_STATIC_ASSERT_EXPR(expr, gba_size, pc_size, msg) static_assert((expr) == (gba_size), msg)
-#define PORT_STATIC_ASSERT_OFFSET(type, field, gba_off, pc_off, msg) static_assert(offsetof(type, field) == (gba_off), msg)
+#define PORT_STATIC_ASSERT_OFFSET(type, field, gba_off, pc_off, msg) \
+    static_assert(offsetof(type, field) == (gba_off), msg)
 #endif
 
 #define super (&this->base)

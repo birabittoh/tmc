@@ -218,7 +218,8 @@ void LoadMapData(MapDataDefinition* dataDefinition) {
             if (dest != NULL) {
                 if ((dataDefinition->src & MAP_SRC_FILE) != 0) {
                     u32 assetSize = 0;
-                    src = (u8*)Port_GetMapAssetDataByIndex(dataDefinition->src & ~(MAP_MULTIPLE | MAP_SRC_FILE), &assetSize);
+                    src = (u8*)Port_GetMapAssetDataByIndex(dataDefinition->src & ~(MAP_MULTIPLE | MAP_SRC_FILE),
+                                                           &assetSize);
                     if (src == NULL) {
                         fprintf(stderr, "LoadMapData: missing map asset index %u area=%u room=%u\n",
                                 dataDefinition->src & ~(MAP_MULTIPLE | MAP_SRC_FILE), gRoomControls.area,
@@ -565,13 +566,13 @@ u32 UpdatePlayerCollision(void) {
             }
             {
                 u32 cloneMask = ((BeanstalkPlayerCloneEntity*)gPlayerClones[0])->unk6c;
-            while (index < 3) {
-                if ((gPlayerClones[index] != NULL) && ((cloneMask & (1 << index)) != 0) &&
-                    (sub_0801A570(gPlayerClones[index], 0) == position)) {
-                    tmp3++;
+                while (index < 3) {
+                    if ((gPlayerClones[index] != NULL) && ((cloneMask & (1 << index)) != 0) &&
+                        (sub_0801A570(gPlayerClones[index], 0) == position)) {
+                        tmp3++;
+                    }
+                    index++;
                 }
-                index++;
-            }
             }
             if (tmp3 < tmp2) {
                 return 0;
