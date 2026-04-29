@@ -4,6 +4,7 @@ TMC PC Port — interactive build script
 Run from repository root: python3 build.py
 """
 
+import argparse
 import hashlib
 import os
 import platform
@@ -55,7 +56,17 @@ def warn(m):       print(f"  \033[33m!\033[0m  {m}")
 def err(m):        print(f"  \033[31m✗\033[0m  {m}")
 def info(m):       print(f"     {m}")
 
-def prompt(msg: str, choices=None) -> str:
+NON_INTERACTIVE = False
+
+def prompt(msg: str, choices=None, default=None) -> str:
+    if NON_INTERACTIVE:
+        if default:
+            info(f"Non-interactive mode: using default '{default}' for '{msg}'")
+            return default
+        else:
+            err(f"Non-interactive mode: no default for '{msg}'")
+            sys.exit(1)
+
     suffix = f" [{'/'.join(choices)}]" if choices else ""
     while True:
         try:
@@ -149,7 +160,7 @@ def check_deps() -> bool:
             else:
                 info(f"  sudo apt install {' '.join(miss_apt)}")
             blank()
-            if prompt("Attempt automatic install?", ["y", "n"]) == "y":
+            if prompt("Attempt automatic install?", ["y", "n"], default="n") == "y":
                 cmd = (["sudo", "pacman", "-S", "--noconfirm"] + miss_arch if is_arch
                        else ["sudo", "apt", "install", "-y"] + miss_apt)
                 if run_cmd(cmd, check=False).returncode != 0:
@@ -243,7 +254,7 @@ def ensure_roms(selected: list, found: dict) -> dict:
                 continue
             info(f"Copy  {src}")
             info(f"  →   {target}")
-            if prompt("Proceed?", ["y", "n"]) == "y":
+            if prompt("Proceed?", ["y", "n"], default="y") == "y":
                 shutil.copy2(src, target)
                 ok(f"Copied {target.name}")
                 result[v] = True
@@ -273,7 +284,7 @@ def build_version(version: str, env: dict) -> Optional[Path]:
     # Skip prompt if dist binary already exists
     dst_bin = dist_dir / EXE_NAME
     if dst_bin.exists():
-        ans = prompt(f"{version} already built at dist/{version}/{EXE_NAME}. Rebuild?", ["y", "n"])
+        ans = prompt(f"{version} already built at dist/{version}/{EXE_NAME}. Rebuild?", ["y", "n"], default="y")
         if ans == "n":
             return dst_bin
 
@@ -337,6 +348,15 @@ def build_version(version: str, env: dict) -> Optional[Path]:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    global NON_INTERACTIVE
+    parser = argparse.ArgumentParser(description="TMC PC Port Builder")
+    parser.add_argument("--usa", action="store_true", help="Build USA version")
+    parser.add_argument("--eur", action="store_true", help="Build EU version")
+    args = parser.parse_args()
+
+    if args.usa or args.eur:
+        NON_INTERACTIVE = True
+
     header("TMC PC Port Builder")
     info(f"Platform : {PLATFORM}")
     info(f"Repo root: {REPO_ROOT}")
@@ -358,25 +378,30 @@ def main():
             else:
                 warn(f"{v}: not found")
 
-    section("Select Version")
     keys = list(VERSIONS.keys())
-    for i, v in enumerate(keys, 1):
-        rom_ready = (
-            v in found
-            or (REPO_ROOT / VERSIONS[v]["rom_filename"]).exists()
-        )
-        tag = "\033[32mROM ready\033[0m" if rom_ready else "\033[31mROM missing\033[0m"
-        print(f"  {i}) {v:<6} [{tag}]")
-    print(f"  {len(keys) + 1}) Both")
-    print(f"  q) Quit")
+    if NON_INTERACTIVE:
+        selected = []
+        if args.usa: selected.append("USA")
+        if args.eur: selected.append("EU")
+    else:
+        section("Select Version")
+        for i, v in enumerate(keys, 1):
+            rom_ready = (
+                v in found
+                or (REPO_ROOT / VERSIONS[v]["rom_filename"]).exists()
+            )
+            tag = "\033[32mROM ready\033[0m" if rom_ready else "\033[31mROM missing\033[0m"
+            print(f"  {i}) {v:<6} [{tag}]")
+        print(f"  {len(keys) + 1}) Both")
+        print(f"  q) Quit")
 
-    valid = [str(i) for i in range(1, len(keys) + 2)] + ["q"]
-    choice = prompt("Choice", valid)
-    if choice == "q":
-        sys.exit(0)
+        valid = [str(i) for i in range(1, len(keys) + 2)] + ["q"]
+        choice = prompt("Choice", valid)
+        if choice == "q":
+            sys.exit(0)
 
-    idx      = int(choice)
-    selected = keys if idx == len(keys) + 1 else [keys[idx - 1]]
+        idx      = int(choice)
+        selected = keys if idx == len(keys) + 1 else [keys[idx - 1]]
 
     section("Preparing ROMs")
     rom_ok    = ensure_roms(selected, found)
@@ -391,7 +416,7 @@ def main():
 
     blank()
     info(f"Will build: {', '.join(buildable)}")
-    if prompt("Start?", ["y", "n"]) == "n":
+    if prompt("Start?", ["y", "n"], default="y") == "n":
         sys.exit(0)
 
     env     = make_env()

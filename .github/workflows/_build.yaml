@@ -1,0 +1,113 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      publish_mode:
+        description: "'artifact' for CI, 'release' for GitHub release"
+        required: true
+        type: string
+      artifact_name:
+        description: "Artifact name prefix"
+        required: false
+        type: string
+        default: ""
+      tag:
+        description: "Release tag"
+        required: false
+        type: string
+        default: ""
+
+env:
+  ASSETS_REPO: ${{ vars.ASSETS_REPO }}
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-latest
+            artifact_suffix: windows-x64
+            artifact_ext: .exe
+            build_flags: "--usa --eur"
+          - platform: linux
+            runner: ubuntu-latest
+            artifact_suffix: linux-x64
+            artifact_ext: ""
+            build_flags: "--usa --eur"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt update
+          sudo apt install -y libsdl3-dev libpng-dev libfmt-dev nlohmann-json3-dev
+
+      - name: Install xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+
+      - name: Fetch ROMs
+        env:
+          GH_TOKEN: ${{ secrets.ASSETS_TOKEN }}
+        shell: bash
+        run: |
+          gh api -H "Accept: application/vnd.github.raw" "repos/${{ env.ASSETS_REPO }}/contents/baserom.gba" > baserom.gba
+          gh api -H "Accept: application/vnd.github.raw" "repos/${{ env.ASSETS_REPO }}/contents/baserom_eu.gba" > baserom_eu.gba
+
+          # Verify sizes to ensure they were downloaded correctly
+          [ -s baserom.gba ] || { echo "baserom.gba is empty"; exit 1; }
+          [ -s baserom_eu.gba ] || { echo "baserom_eu.gba is empty"; exit 1; }
+
+      - name: Build
+        shell: bash
+        run: python3 build.py ${{ matrix.build_flags }}
+
+      - name: Prepare Artifacts
+        shell: bash
+        run: |
+          mkdir -p output
+
+          # We want to package USA and EU builds
+          for ver in USA EU; do
+            if [ -d "dist/$ver" ]; then
+              mkdir -p "output/$ver"
+              cp -r "dist/$ver/"* "output/$ver/"
+              # asset_extractor is in build/pc/
+              cp "build/pc/asset_extractor${{ matrix.artifact_ext }}" "output/$ver/"
+            fi
+          done
+
+      - name: Create ZIP
+        shell: bash
+        run: |
+          if [ "${{ inputs.publish_mode }}" == "release" ]; then
+            ZIP_NAME="tmc_pc-${{ inputs.tag }}-${{ matrix.artifact_suffix }}.zip"
+          else
+            ZIP_NAME="${{ inputs.artifact_name }}-${{ matrix.artifact_suffix }}.zip"
+          fi
+
+          cd output
+          if [ "${{ matrix.platform }}" == "windows" ]; then
+            7z a "../$ZIP_NAME" *
+          else
+            zip -r "../$ZIP_NAME" *
+          fi
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIP_NAME }}
+          path: ${{ env.ZIP_NAME }}
+          if-no-files-found: error
