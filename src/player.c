@@ -303,10 +303,8 @@ bool32 CheckInitPauseMenu(void) {
 #ifdef PC_PORT
         if (gInput.newKeys & START_BUTTON) {
             fprintf(stderr, "[MENU] blocked: fade=%d disabled=%d msgActive=%d health=%d inv=%d ctrl=%d ptimer=%u\n",
-                    gFadeControl.active, gPauseMenuOptions.disabled,
-                    (gMessage.state & MESSAGE_ACTIVE) ? 1 : 0,
-                    gSave.stats.health, gSave.inventory[0],
-                    gPlayerState.controlMode, gPriorityHandler.priority_timer);
+                    gFadeControl.active, gPauseMenuOptions.disabled, (gMessage.state & MESSAGE_ACTIVE) ? 1 : 0,
+                    gSave.stats.health, gSave.inventory[0], gPlayerState.controlMode, gPriorityHandler.priority_timer);
         }
 #endif
         return FALSE;

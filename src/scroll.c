@@ -633,7 +633,8 @@ const Transition* FindApplicableAreaTransition(u32 pos_x, u32 pos_y) {
     }
     while (transition->warp_type != WARP_TYPE_END_OF_LIST) {
         u32 warpType = transition->warp_type;
-        if (warpType < 32 && ((1U << warpType) & warp_types) != 0 && IsPosInTransitionRect(transition, pos_x, pos_y, 0)) {
+        if (warpType < 32 && ((1U << warpType) & warp_types) != 0 &&
+            IsPosInTransitionRect(transition, pos_x, pos_y, 0)) {
             return transition;
         }
         transition++;

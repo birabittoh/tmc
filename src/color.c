@@ -116,8 +116,8 @@ u32 LoadObjPalette(Entity* entity, u32 objPaletteId) {
     SetEntityObjPalette(entity, slot);
 #ifdef PC_PORT
     if (slot == 3 && objPaletteId != 3) {
-        fprintf(stderr, "[PAL] WARNING: slot=3 but objPaletteId=%u for kind=%d id=%d type=%d\n",
-                objPaletteId, entity->kind, entity->id, entity->type);
+        fprintf(stderr, "[PAL] WARNING: slot=3 but objPaletteId=%u for kind=%d id=%d type=%d\n", objPaletteId,
+                entity->kind, entity->id, entity->type);
     }
 #endif
     return slot;

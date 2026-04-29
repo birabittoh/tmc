@@ -846,8 +846,8 @@ u32 sub_08053144(void) {
 void CheckAreaDiscovery(void) {
     if (!sub_08053144()) {
 #ifdef PC_PORT
-        fprintf(stderr, "[AREA] no-change area=%u room=%u loc=%u prevLoc=%u\n", gRoomControls.area,
-                gRoomControls.room, gArea.locationIndex, gRoomTransition.location);
+        fprintf(stderr, "[AREA] no-change area=%u room=%u loc=%u prevLoc=%u\n", gRoomControls.area, gRoomControls.room,
+                gArea.locationIndex, gRoomTransition.location);
 #endif
         return;
     }
@@ -861,10 +861,9 @@ void CheckAreaDiscovery(void) {
             e->id = ENTER_ROOM_TEXTBOX_MANAGER;
             AppendEntityToList(e, 8);
 #ifdef PC_PORT
-            fprintf(stderr,
-                    "[AREA] spawn textbox area=%u room=%u loc=%u visited=%u scrolling=%u\n",
-                    gRoomControls.area, gRoomControls.room, gArea.locationIndex,
-                    ReadBit(gSave.areaVisitFlags, gArea.locationIndex), gRoomVars.didEnterScrolling);
+            fprintf(stderr, "[AREA] spawn textbox area=%u room=%u loc=%u visited=%u scrolling=%u\n", gRoomControls.area,
+                    gRoomControls.room, gArea.locationIndex, ReadBit(gSave.areaVisitFlags, gArea.locationIndex),
+                    gRoomVars.didEnterScrolling);
 #endif
             if (!gRoomVars.didEnterScrolling && !ReadBit(gSave.areaVisitFlags, gArea.locationIndex)) {
                 e->type2 = 1;

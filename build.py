@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-TMC PC Port — interactive build script
+TMC PC Port - interactive build script
 Run from repository root: python3 build.py
 """
 
@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-# ── Constants ─────────────────────────────────────────────────────────────────
+# -- Constants -----------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parent
 PLATFORM  = platform.system()   # Linux | Windows | Darwin
@@ -43,7 +43,7 @@ SHA1_TO_VERSION = {
     v["sha1"]: k for k, v in VERSIONS.items() if v["sha1"]
 }
 
-# ── UI helpers ────────────────────────────────────────────────────────────────
+# -- UI helpers ----------------------------------------------------------------
 
 W = 64
 
@@ -53,13 +53,13 @@ def _safe_print(s: str):
     except UnicodeEncodeError:
         print(s.encode("ascii", "replace").decode("ascii"))
 
-def hr(ch="─"):    _safe_print(ch * W)
+def hr(ch="-"):    _safe_print(ch * W)
 def blank():       print()
 def header(t):     hr("="); _safe_print(f"  {t}"); hr("=")
 def section(t):    blank(); hr(); _safe_print(f"  {t}"); hr()
-def ok(m):         print(f"  \033[32m✓\033[0m  {m}")
-def warn(m):       print(f"  \033[33m!\033[0m  {m}")
-def err(m):        print(f"  \033[31m✗\033[0m  {m}")
+def ok(m):         _safe_print(f"  [OK]  {m}")
+def warn(m):       _safe_print(f"  [!]   {m}")
+def err(m):        _safe_print(f"  [ERR] {m}")
 def info(m):       print(f"     {m}")
 
 NON_INTERACTIVE = False
@@ -76,18 +76,18 @@ def prompt(msg: str, choices=None, default=None) -> str:
     suffix = f" [{'/'.join(choices)}]" if choices else ""
     while True:
         try:
-            ans = input(f"  → {msg}{suffix}: ").strip().lower()
+            ans = input(f"  -> {msg}{suffix}: ").strip().lower()
         except (EOFError, KeyboardInterrupt):
             blank(); sys.exit(0)
         if not choices or ans in choices:
             return ans
         err(f"Enter one of: {', '.join(choices)}")
 
-# ── Subprocess ────────────────────────────────────────────────────────────────
+# -- Subprocess ----------------------------------------------------------------
 
 def run_cmd(cmd, env=None, cwd=None, check=True) -> subprocess.CompletedProcess:
     display = " ".join(str(c) for c in cmd)
-    print(f"\n  \033[90m$ {display}\033[0m")
+    print(f"\n  $ {display}")
     result = subprocess.run(
         [str(c) for c in cmd],
         env=env,
@@ -97,7 +97,7 @@ def run_cmd(cmd, env=None, cwd=None, check=True) -> subprocess.CompletedProcess:
         raise RuntimeError(f"Command exited {result.returncode}: {display}")
     return result
 
-# ── File utils ────────────────────────────────────────────────────────────────
+# -- File utils ----------------------------------------------------------------
 
 def sha1_file(path: Path) -> str:
     h = hashlib.sha1()
@@ -112,7 +112,7 @@ def dir_populated(d: Path) -> bool:
     except OSError:
         return False
 
-# ── Dependency detection ──────────────────────────────────────────────────────
+# -- Dependency detection ------------------------------------------------------
 
 def detect_distro() -> str:
     try:
@@ -143,6 +143,9 @@ WIN_DEPS = [
 ]
 
 def check_deps() -> bool:
+    if os.getenv("GITHUB_ACTIONS"):
+        return True
+
     all_ok = True
 
     if PLATFORM == "Linux":
@@ -170,7 +173,7 @@ def check_deps() -> bool:
                 cmd = (["sudo", "pacman", "-S", "--noconfirm"] + miss_arch if is_arch
                        else ["sudo", "apt", "install", "-y"] + miss_apt)
                 if run_cmd(cmd, check=False).returncode != 0:
-                    err("Automatic install failed — install manually and re-run.")
+                    err("Automatic install failed - install manually and re-run.")
                     return False
                 # Re-check after install
                 still_missing = [l for l, fn, *_ in LINUX_DEPS if not fn()]
@@ -202,7 +205,7 @@ def check_deps() -> bool:
     virua  = REPO_ROOT / "libs" / "ViruaPPU"
     virtua = REPO_ROOT / "libs" / "VirtuaAPU"
     if not dir_populated(virua) or not dir_populated(virtua):
-        warn("Git submodules not initialized — fetching...")
+        warn("Git submodules not initialized - fetching...")
         try:
             run_cmd(["git", "submodule", "update", "--init", "--recursive"], cwd=REPO_ROOT)
             ok("Git submodules")
@@ -214,7 +217,7 @@ def check_deps() -> bool:
 
     return all_ok
 
-# ── ROM handling ──────────────────────────────────────────────────────────────
+# -- ROM handling --------------------------------------------------------------
 
 def scan_roms() -> dict:
     """Return {version: Path} for all recognized ROMs found nearby."""
@@ -259,7 +262,7 @@ def ensure_roms(selected: list, found: dict) -> dict:
                 result[v] = True
                 continue
             info(f"Copy  {src}")
-            info(f"  →   {target}")
+            info(f"  ->   {target}")
             if prompt("Proceed?", ["y", "n"], default="y") == "y":
                 shutil.copy2(src, target)
                 ok(f"Copied {target.name}")
@@ -275,12 +278,12 @@ def ensure_roms(selected: list, found: dict) -> dict:
 
     return result
 
-# ── Build pipeline ────────────────────────────────────────────────────────────
+# -- Build pipeline ------------------------------------------------------------
 
 def make_env() -> dict:
     env = os.environ.copy()
     env["XMAKE_ROOT"] = "y"
-    if PLATFORM == "Linux":
+    if PLATFORM == "Linux" and not os.getenv("GITHUB_ACTIONS"):
         env["XMAKE_USE_SYSTEM_SDL3"] = "1"
     return env
 
@@ -321,11 +324,11 @@ def build_version(version: str, env: dict) -> Optional[Path]:
         try:
             run_cmd([extractor], cwd=REPO_ROOT)
         except RuntimeError:
-            warn("asset_extractor failed — runtime assets may be incomplete")
+            warn("asset_extractor failed - runtime assets may be incomplete")
     else:
-        warn("asset_extractor not built — run: xmake build asset_extractor")
+        warn("asset_extractor not built - run: xmake build asset_extractor")
 
-    # ── Copy artefacts to dist/<version>/ ────────────────────────────────────
+    # -- Copy artefacts to dist/<version>/ ------------------------------------
 
     src_bin = REPO_ROOT / "build" / "pc" / EXE_NAME
     if not src_bin.exists():
@@ -335,7 +338,7 @@ def build_version(version: str, env: dict) -> Optional[Path]:
     shutil.copy2(src_bin, dst_bin)
     if PLATFORM != "Windows":
         dst_bin.chmod(dst_bin.stat().st_mode | 0o111)
-    ok(f"Binary    →  dist/{version}/{EXE_NAME}")
+    ok(f"Binary    ->  dist/{version}/{EXE_NAME}")
 
     # Runtime assets (build/pc/assets/) and editable assets (build/pc/assets_src/)
     for src_name in ("assets", "assets_src"):
@@ -345,13 +348,13 @@ def build_version(version: str, env: dict) -> Optional[Path]:
             if dst.exists():
                 shutil.rmtree(dst)
             shutil.copytree(src, dst)
-            ok(f"{src_name}/  →  dist/{version}/{src_name}/")
+            ok(f"{src_name}/  ->  dist/{version}/{src_name}/")
         else:
-            warn(f"build/pc/{src_name}/ not found — skipping")
+            warn(f"build/pc/{src_name}/ not found - skipping")
 
     return dst_bin
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# -- Main ----------------------------------------------------------------------
 
 def main():
     global NON_INTERACTIVE
@@ -396,7 +399,7 @@ def main():
                 v in found
                 or (REPO_ROOT / VERSIONS[v]["rom_filename"]).exists()
             )
-            tag = "\033[32mROM ready\033[0m" if rom_ready else "\033[31mROM missing\033[0m"
+            tag = "ROM ready" if rom_ready else "ROM missing"
             print(f"  {i}) {v:<6} [{tag}]")
         print(f"  {len(keys) + 1}) Both")
         print(f"  q) Quit")
@@ -444,7 +447,7 @@ def main():
             info(f"    ./{EXE_NAME}")
             blank()
         else:
-            err(f"{v} — build failed")
+            err(f"{v} - build failed")
 
     sys.exit(0 if any_ok else 1)
 
