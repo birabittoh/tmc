@@ -291,13 +291,24 @@ def build_version(version: str, env: dict, non_interactive: bool = False) -> Opt
     if toolchain:
         configure_cmd.append(f"--toolchain={toolchain}")
 
+    assets_dir = REPO_ROOT / "build" / "pc" / "assets"
+    assets_src_dir = REPO_ROOT / "build" / "pc" / "assets_src"
+    assets_ready = assets_dir.exists() and assets_src_dir.exists()
+
     steps = [
         (f"Configure ({version})",      configure_cmd),
-        ("Extract assets",              ["xmake", "extract_assets"]),
-        ("Convert assets",              ["xmake", "convert_assets"]),
-        ("Build assets",                ["xmake", "build_assets"]),
-        (f"Compile tmc_pc ({version})", ["xmake", "build", "-y", "tmc_pc"]),
     ]
+
+    if assets_ready:
+        info("Assets already exist in build/pc/assets and build/pc/assets_src — skipping extract/convert/build_assets.")
+    else:
+        steps.extend([
+            ("Extract assets",              ["xmake", "extract_assets"]),
+            ("Convert assets",              ["xmake", "convert_assets"]),
+            ("Build assets",                ["xmake", "build_assets"]),
+        ])
+
+    steps.append((f"Compile tmc_pc ({version})", ["xmake", "build", "-y", "tmc_pc"]))
 
     for label, cmd in steps:
         info(f"{label}...")
