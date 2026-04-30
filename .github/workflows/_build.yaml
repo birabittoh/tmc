@@ -64,6 +64,10 @@ jobs:
         uses: xmake-io/github-action-setup-xmake@v1
 
 
+      - name: Install LLVM (Windows)
+        if: matrix.os_name == 'windows'
+        run: choco install llvm -y
+
       - name: Checkout private assets repository
         uses: actions/checkout@v4
         with:
@@ -83,6 +87,8 @@ jobs:
 
       - name: Build selected region (non-interactive, Windows)
         if: matrix.os_name == 'windows'
+        env:
+          TMC_XMAKE_TOOLCHAIN: clang
         run: python build.py ${{ matrix.flag }}
 
       - name: Prepare artifact payload
